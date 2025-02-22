@@ -33,6 +33,13 @@ def load_beers():
                             except ValueError:
                                 beer_data["ibu"] = 0.0
 
+                        labels = beer_data.get("labels", {})
+
+                        if isinstance(labels, dict) and labels:
+                            beer_data["labels"] = list(labels.values())[-1]
+                        else:
+                            beer_data["labels"] = ""
+
                         description = beer_data["description"].strip()
                         if description and not all(word in ENGLISH_STOP_WORDS for word in description.split()):
                             beers.append(Beer(**beer_data))

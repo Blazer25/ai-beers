@@ -1,18 +1,18 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.neighbors import NearestNeighbors
-from models.beer_model import Beer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 class BeerAI:
     def __init__(self):
         self.vectorizer = TfidfVectorizer()
-        self.model = NearestNeighbors(n_neighbors=5)
+        self.model = None
 
-    def train(self, beers: list[Beer]):
+    def train(self, beers):
         descriptions = [beer.description for beer in beers]
-        X = self.vectorizer.fit_transform(descriptions)
-        self.model.fit(X)
+        self.model = self.vectorizer.fit_transform(descriptions)
 
-    def predict(self, beers: list[Beer], characteristic: str):
-        X = self.vectorizer.transform([characteristic])
-        distances, indices = self.model.kneighbors(X)
-        return [beers[i] for i in indices[0]]
+    def predict(self, beers, characteristic):
+        characteristic_vector = self.vectorizer.transform([characteristic])
+        similarities = cosine_similarity(characteristic_vector, self.model)
+        indices = np.argsort(similarities[0])[::-1]  # Ordena os índices pela similaridade
+        return [beers[i] for i in indices]

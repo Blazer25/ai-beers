@@ -6,3 +6,4 @@ class Beer(BaseModel):
     abv: float
     ibu: float
     description: str
+    labels: str = ""
