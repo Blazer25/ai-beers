@@ -1,6 +1,9 @@
 import json
 import os
 import logging
+
+from fastapi import HTTPException
+from sklearn.exceptions import NotFittedError
 from models.beer_model import Beer
 from ai.beer_ai import BeerAI
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
@@ -42,20 +45,32 @@ def load_beers():
 
                         description = beer_data["description"].strip()
                         if description and not all(word in ENGLISH_STOP_WORDS for word in description.split()):
-                            beers.append(Beer(**beer_data))
+                            beer_data_mapped = {
+                                "nome": beer_data["name"],
+                                "estilo": beer_data["style"],
+                                "abv": beer_data["abv"],
+                                "ibu": beer_data["ibu"],
+                                "descricao": beer_data["description"],
+                                "rotulo": beer_data["labels"]
+                            }
+                            beers.append(Beer(**beer_data_mapped))
                         else:
-                            logging.info(f"Descrição inválida no arquivo  {filename}: {description}")
+                            logging.info(f"Descrição inválida no arquivo {filename}: {description}")
 
     logging.info(f"Carregadas {len(beers)} cervejas válidas")
     return beers
 
-def find_beers_by_characteristic(characteristic: str):
+def find_beers_by_characteristic(caracteristica: str, limiar: float = 0.1):
     beers = load_beers()
-    return beer_ai.predict(beers, characteristic)
+    try:
+        return beer_ai.predict(beers, caracteristica, limiar)
+    except NotFittedError:
+        logging.error("Modelo não treinado!")
+        raise HTTPException(status_code=500, detail="Modelo não treinado. Por favor, treine o modelo antes de fazer previsões. Use o endpoint POST /treinar-modelo")
 
 def train_model():
     beers = load_beers()
-    valid_beers = [beer for beer in beers if beer.description and not all(word in ENGLISH_STOP_WORDS for word in beer.description.split())]
+    valid_beers = [beer for beer in beers if beer.descricao and not all(word in ENGLISH_STOP_WORDS for word in beer.descricao.split())]
     if not valid_beers:
         raise ValueError("Sem cervejas válidas para treinar o modelo.")
     beer_ai.train(valid_beers)
